@@ -1,0 +1,4 @@
+duckdb>=1.5
+pydantic>=2.10
+groq>=1.6
+faker>=30.0
