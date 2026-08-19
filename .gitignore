@@ -41,31 +41,6 @@ ENV/
 secrets/
 credentials/
 
-# -----------------------------
-# Generated Data
-# -----------------------------
-data/*.jsonl
-data/*.json
-data/*.csv
-data/*.parquet
-
-# DuckDB databases
-*.duckdb
-*.duckdb.wal
-*.db
-
-# Generated datasets / outputs
-data/generated/
-data/processed/
-data/raw/
-outputs/
-artifacts/
-
-# -----------------------------
-# Logs
-# -----------------------------
-*.log
-logs/
 
 # -----------------------------
 # ML / Embeddings / Models
@@ -82,23 +57,7 @@ embeddings/
 *.pth
 *.onnx
 
-# -----------------------------
-# Testing / Coverage
-# -----------------------------
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-.tox/
-.nox/
-coverage.xml
-pytestdebug.log
-
-# -----------------------------
-# Jupyter
-# -----------------------------
-.ipynb_checkpoints/
-*.ipynb_checkpoints
+#
 
 # -----------------------------
 # Type checking / Linters
@@ -126,24 +85,3 @@ pytestdebug.log
 Thumbs.db
 desktop.ini
 
-# -----------------------------
-# Temporary files
-# -----------------------------
-*.tmp
-*.temp
-*.bak
-*.backup
-
-# -----------------------------
-# EvalLoop generated reports
-# -----------------------------
-reports/generated/
-reports/*.json
-reports/*.csv
-reports/*.html
-
-# -----------------------------
-# Local Phase artifacts
-# -----------------------------
-PHASE*_LOCAL.md
-```
