@@ -1,0 +1,149 @@
+```gitignore
+# ============================================
+# EvalLoop - Git Ignore
+# ============================================
+
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# -----------------------------
+# Virtual environments
+# -----------------------------
+.venv/
+venv/
+env/
+ENV/
+.env/
+.venv.bak/
+
+# -----------------------------
+# Environment / Secrets
+# -----------------------------
+.env
+.env.*
+!.env.example
+
+# API keys / credentials
+*.key
+*.pem
+secrets/
+credentials/
+
+# -----------------------------
+# Generated Data
+# -----------------------------
+data/*.jsonl
+data/*.json
+data/*.csv
+data/*.parquet
+
+# DuckDB databases
+*.duckdb
+*.duckdb.wal
+*.db
+
+# Generated datasets / outputs
+data/generated/
+data/processed/
+data/raw/
+outputs/
+artifacts/
+
+# -----------------------------
+# Logs
+# -----------------------------
+*.log
+logs/
+
+# -----------------------------
+# ML / Embeddings / Models
+# -----------------------------
+models/
+checkpoints/
+embeddings/
+*.pkl
+*.pickle
+*.joblib
+*.h5
+*.keras
+*.pt
+*.pth
+*.onnx
+
+# -----------------------------
+# Testing / Coverage
+# -----------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+pytestdebug.log
+
+# -----------------------------
+# Jupyter
+# -----------------------------
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# -----------------------------
+# Type checking / Linters
+# -----------------------------
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# -----------------------------
+# IDEs / Editors
+# -----------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Keep VS Code project settings if needed
+# !.vscode/settings.json
+
+# -----------------------------
+# OS generated files
+# -----------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# -----------------------------
+# Temporary files
+# -----------------------------
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# -----------------------------
+# EvalLoop generated reports
+# -----------------------------
+reports/generated/
+reports/*.json
+reports/*.csv
+reports/*.html
+
+# -----------------------------
+# Local Phase artifacts
+# -----------------------------
+PHASE*_LOCAL.md
+```
