@@ -97,8 +97,8 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
     category-specific metadata (error_status, is_safety_edge_case, etc.)."""
 
     extra: dict = {"error_status": None, "is_safety_edge_case": False, "user_feedback": "none", "retry_count": 0}
-    
-if category == "good":
+
+    if category == "good":
         system = feature["system_prompt"]
         response = _chat(client, system, prompt, temperature=0.6, max_tokens=250)
         extra["user_feedback"] = random.choices(["positive", "none"], weights=[0.4, 0.6])[0]
