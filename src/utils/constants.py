@@ -46,7 +46,7 @@ SIMULATED_MODELS = [
     "llama-3.1-8b-instant",
 ]
 
-GROQ_GENERATION_MODEL = "llama-3.3-70b-versatile"
+GROQ_GENERATION_MODEL = "openai/gpt-oss-120b"
 
 # Response category weights — deliberately NOT uniform. Real production
 # traffic skews heavily toward "good", but we want a realistic minority of
