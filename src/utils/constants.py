@@ -42,10 +42,13 @@ FEATURES = [
 # Models used to tag synthetic logs (not actually swapped per-call — just
 # varied in metadata to simulate a multi-model production environment).
 SIMULATED_MODELS = [
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
+    "openai/gpt-oss-120b",
+    "openai/gpt-oss-20b",
 ]
 
+# NOTE: llama-3.3-70b-versatile was deprecated for free/developer-tier Groq
+# usage (mid-2026). Using openai/gpt-oss-120b instead, which Groq's own
+# migration guidance recommends as the replacement.
 GROQ_GENERATION_MODEL = "openai/gpt-oss-120b"
 
 # Response category weights — deliberately NOT uniform. Real production
