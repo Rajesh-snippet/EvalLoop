@@ -129,7 +129,13 @@ def check_field_sanity(logs: list[LogEntry]) -> None:
     if duplicate_ids:
         issues.append(f"{duplicate_ids} duplicate log_ids")
 
-    if issues:
+    empty_rate = (len(empty_prompts) + len(empty_responses)) / (2 * len(logs))
+    if empty_rate > 0.1:
+        print(f"    🛑 FAIL: {empty_rate:.0%} of prompt/response fields are empty — dataset is unusable as-is.")
+        print("       Likely cause: a reasoning model (gpt-oss) returned empty content because")
+        print("       its token budget was consumed by hidden reasoning. Re-generate after fixing")
+        print("       max_tokens / reasoning_effort in synthetic_generator.py, don't proceed to Phase 2.")
+    elif issues:
         print(f"    ⚠ Found: {', '.join(issues)}")
     else:
         print("    ✅ No empty fields, zero-token rows, or duplicate IDs.")
