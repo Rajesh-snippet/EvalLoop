@@ -45,9 +45,9 @@ class LogEntry(BaseModel):
     feature_name: str
     model: str
 
-    system_prompt: str
-    prompt: str
-    response: str
+    system_prompt: str = Field(min_length=1)
+    prompt: str = Field(min_length=1)
+    response: str = Field(min_length=1)
 
     latency_ms: int = Field(ge=0)
     prompt_tokens: int = Field(ge=0)
