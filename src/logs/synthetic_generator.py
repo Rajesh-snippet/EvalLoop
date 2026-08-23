@@ -26,7 +26,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+from dotenv import load_dotenv  # noqa: E402
 from groq import Groq  # noqa: E402
+
+load_dotenv()  # loads GROQ_API_KEY from a .env file in the project root, if present
 
 from src.logs.redaction import redact_log_fields  # noqa: E402
 from src.logs.schema import ERROR_STATUS_VALUES, LogEntry  # noqa: E402
