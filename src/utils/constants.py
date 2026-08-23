@@ -47,9 +47,28 @@ SIMULATED_MODELS = [
 ]
 
 # NOTE: llama-3.3-70b-versatile was deprecated for free/developer-tier Groq
-# usage (mid-2026). Using openai/gpt-oss-120b instead, which Groq's own
-# migration guidance recommends as the replacement.
-GROQ_GENERATION_MODEL = "openai/gpt-oss-120b"
+# usage (mid-2026).
+#
+# We initially switched to openai/gpt-oss-120b, but that's a *reasoning*
+# model — it spends hidden "reasoning" tokens on every call (counted against
+# your daily quota even though you never see them), and its free-tier daily
+# token limit (200K TPD) is easy to exhaust well before 1000 logs are
+# generated (observed: ~213 logs consumed the full 200K budget).
+#
+# Switched to llama-3.1-8b-instant instead: not a reasoning model (no hidden
+# token overhead), much cheaper per call, and draws from a separate quota
+# bucket entirely, so it isn't affected by gpt-oss-120b's daily cap.
+# If this model 404s on your account (deprecation status has been
+# inconsistent across Groq's docs), try "openai/gpt-oss-20b" instead — same
+# family as 120b but smaller, so it burns quota more slowly even though it's
+# still a reasoning model.
+GROQ_GENERATION_MODEL = "llama-3.1-8b-instant"
+
+# Reasoning-capable models need reasoning_effort passed to avoid burning their
+# whole token budget on hidden reasoning with nothing left for the answer.
+# Non-reasoning models (like llama-3.1-8b-instant) don't support/need this
+# parameter at all — passing it could error, so _chat() checks this list.
+REASONING_MODELS = {"openai/gpt-oss-120b", "openai/gpt-oss-20b"}
 
 # Response category weights — deliberately NOT uniform. Real production
 # traffic skews heavily toward "good", but we want a realistic minority of
