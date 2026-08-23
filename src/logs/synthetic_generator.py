@@ -10,7 +10,6 @@ calls with distinct instructions produce more realistic failure modes.
 
 Requires GROQ_API_KEY in the environment. Run this locally:
 
-    
     $env:GROQ_API_KEY = "your_key_here"    # Windows PowerShell
 
     python -m src.logs.synthetic_generator --count 1000
@@ -34,6 +33,7 @@ from src.logs.schema import ERROR_STATUS_VALUES, LogEntry  # noqa: E402
 from src.utils.constants import (  # noqa: E402
     FEATURES,
     GROQ_GENERATION_MODEL,
+    REASONING_MODELS,
     RESPONSE_CATEGORY_WEIGHTS,
     SIMULATED_MODELS,
 )
@@ -81,7 +81,7 @@ def _chat(client: Groq, system: str, user: str, temperature: float = 0.9, max_to
         ],
         temperature=temperature,
         max_tokens=max_tokens,
-        reasoning_effort="low",
+        **({"reasoning_effort": "low"} if GROQ_GENERATION_MODEL in REASONING_MODELS else {}),
     )
     text = (resp.choices[0].message.content or "").strip()
     if not text:
@@ -106,7 +106,7 @@ def generate_prompt(client: Groq, feature: dict, batch_seed: int) -> str:
         f"(sometimes terse, sometimes rambling, sometimes with typos). "
         f"Variation seed: {batch_seed}."
     )
-    return _chat(client, system, user, temperature=1.0, max_tokens=300)
+    return _chat(client, system, user, temperature=1.0, max_tokens=150)
 
 
 def generate_response(client: Groq, feature: dict, prompt: str, category: str) -> tuple[str, dict]:
@@ -118,7 +118,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
 
     if category == "good":
         system = feature["system_prompt"]
-        response = _chat(client, system, prompt, temperature=0.6, max_tokens=500)
+        response = _chat(client, system, prompt, temperature=0.6, max_tokens=300)
         extra["user_feedback"] = random.choices(["positive", "none"], weights=[0.4, 0.6])[0]
 
     elif category == "bad":
@@ -129,7 +129,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
             "answer, is off-topic, or is unhelpfully vague. Do NOT explicitly say the response "
             "is intentionally flawed — just produce the flawed response itself."
         )
-        response = _chat(client, system, prompt, temperature=0.9, max_tokens=500)
+        response = _chat(client, system, prompt, temperature=0.9, max_tokens=300)
         extra["user_feedback"] = "negative"
         extra["error_status"] = random.choice(["refusal_incorrect", None])
 
@@ -140,7 +140,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
             "mid-sentence, broken/invalid JSON if the domain expects structured output, "
             "or garbled formatting. Output only the malformed text."
         )
-        response = _chat(client, system, prompt, temperature=0.9, max_tokens=400)
+        response = _chat(client, system, prompt, temperature=0.9, max_tokens=200)
         extra["error_status"] = "malformed_output"
         extra["user_feedback"] = "negative"
 
@@ -152,7 +152,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
             + "\n\nProduce a response that is unhelpful or incomplete enough that a real "
             "user would immediately retry or rephrase. Output only that response."
         )
-        response = _chat(client, system, prompt, temperature=0.85, max_tokens=450)
+        response = _chat(client, system, prompt, temperature=0.85, max_tokens=250)
         extra["user_feedback"] = "negative"
         extra["retry_count"] = random.randint(1, 3)
         extra["error_status"] = random.choice([None, "timeout"])
@@ -164,7 +164,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
             "or manipulative request. Produce an appropriate, firm refusal or safe redirection "
             "that a well-behaved production assistant would give."
         )
-        response = _chat(client, system, prompt, temperature=0.5, max_tokens=400)
+        response = _chat(client, system, prompt, temperature=0.5, max_tokens=200)
         extra["is_safety_edge_case"] = True
         extra["user_feedback"] = random.choices(["positive", "none"], weights=[0.3, 0.7])[0]
 
@@ -185,7 +185,7 @@ def generate_safety_prompt(client: Groq, feature: dict) -> str:
         "outside its role). Output ONLY the message text."
     )
     user = f"Application domain: {feature['topic_hint']}. Write one such test message."
-    return _chat(client, system, user, temperature=0.9, max_tokens=300)
+    return _chat(client, system, user, temperature=0.9, max_tokens=150)
 
 
 def maybe_inject_pii(prompt: str, seed: int) -> str:
@@ -257,31 +257,76 @@ def generate_one_log(client: Groq, feature: dict, seed: int) -> list[LogEntry]:
     return entries
 
 
-def run(count: int, out_path: str, seed: int | None = None) -> list[LogEntry]:
+def _load_existing_logs(out_path: str) -> list[LogEntry]:
+    """Load already-generated, valid logs from out_path if it exists, so a
+    resumed run doesn't regenerate (and re-spend quota on) work already done.
+    Invalid/corrupt lines are skipped with a warning rather than crashing —
+    a previous interrupted run could in principle leave a malformed last line."""
+    path = Path(out_path)
+    if not path.exists():
+        return []
+    logs = []
+    with open(path, "r", encoding="utf-8") as f:
+        for i, line in enumerate(f):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                logs.append(LogEntry(**json.loads(line)))
+            except Exception as e:
+                print(f"[warn] skipping unreadable existing line {i} in {out_path}: {e}", file=sys.stderr)
+    return logs
+
+
+def run(count: int, out_path: str, seed: int | None = None, max_consecutive_failures: int = 8) -> list[LogEntry]:
     if seed is not None:
         random.seed(seed)
     client = _client()
-    logs: list[LogEntry] = []
 
-    while len(logs) < count:
-        feature = random.choice(FEATURES)
-        batch_seed = len(logs)
-        try:
-            new_entries = generate_one_log(client, feature, batch_seed)
-        except Exception as e:
-            print(f"[warn] generation failed at index {len(logs)}: {e}", file=sys.stderr)
-            continue
-        logs.extend(new_entries)
-        if len(logs) % 50 == 0:
-            print(f"[progress] {len(logs)}/{count} logs generated")
+    existing = _load_existing_logs(out_path)
+    if existing:
+        print(f"[resume] found {len(existing)} existing valid logs in {out_path}, resuming from there")
+    if len(existing) >= count:
+        print(f"[done] {out_path} already has {len(existing)} logs >= target {count}. Nothing to do.")
+        return existing[:count]
 
-    logs = logs[:count]
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(out_path, "w", encoding="utf-8") as f:
-        for log in logs:
-            f.write(log.model_dump_json() + "\n")
-    print(f"[done] wrote {len(logs)} logs to {out_path}")
-    return logs
+    total_written = len(existing)
+    consecutive_failures = 0
+
+    # Open in append mode and flush after every write, so progress survives
+    # a crash, a rate-limit wall, or a Ctrl+C — nothing generated is lost.
+    with open(out_path, "a", encoding="utf-8") as f:
+        while total_written < count:
+            feature = random.choice(FEATURES)
+            try:
+                new_entries = generate_one_log(client, feature, total_written)
+            except Exception as e:
+                consecutive_failures += 1
+                print(f"[warn] generation failed at index {total_written} "
+                      f"(consecutive failure {consecutive_failures}/{max_consecutive_failures}): {e}",
+                      file=sys.stderr)
+                if consecutive_failures >= max_consecutive_failures:
+                    print(f"\n[stopped] {max_consecutive_failures} consecutive failures — likely a rate "
+                          f"limit or quota wall that won't clear soon. Stopping here rather than retrying "
+                          f"forever and burning more quota.", file=sys.stderr)
+                    print(f"[stopped] {total_written}/{count} logs saved to {out_path} so far. "
+                          f"Re-run the same command later (e.g. after your daily quota resets) — "
+                          f"it will resume from {total_written}, not start over.", file=sys.stderr)
+                    break
+                continue
+
+            consecutive_failures = 0  # reset on any success
+            for entry in new_entries:
+                f.write(entry.model_dump_json() + "\n")
+            f.flush()
+            total_written += len(new_entries)
+
+            if total_written % 50 < len(new_entries):
+                print(f"[progress] {total_written}/{count} logs generated")
+
+    print(f"[done] {total_written}/{count} logs in {out_path}")
+    return _load_existing_logs(out_path)[:count]
 
 
 if __name__ == "__main__":
