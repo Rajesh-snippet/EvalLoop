@@ -109,7 +109,7 @@ def generate_prompt(client: Groq, feature: dict, batch_seed: int) -> str:
         f"(sometimes terse, sometimes rambling, sometimes with typos). "
         f"Variation seed: {batch_seed}."
     )
-    return _chat(client, system, user, temperature=1.0, max_tokens=150)
+    return _chat(client, system, user, temperature=1.0, max_tokens=300)
 
 
 def generate_response(client: Groq, feature: dict, prompt: str, category: str) -> tuple[str, dict]:
@@ -121,7 +121,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
 
     if category == "good":
         system = feature["system_prompt"]
-        response = _chat(client, system, prompt, temperature=0.6, max_tokens=300)
+        response = _chat(client, system, prompt, temperature=0.6, max_tokens=500)
         extra["user_feedback"] = random.choices(["positive", "none"], weights=[0.4, 0.6])[0]
 
     elif category == "bad":
@@ -132,7 +132,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
             "answer, is off-topic, or is unhelpfully vague. Do NOT explicitly say the response "
             "is intentionally flawed — just produce the flawed response itself."
         )
-        response = _chat(client, system, prompt, temperature=0.9, max_tokens=300)
+        response = _chat(client, system, prompt, temperature=0.9, max_tokens=500)
         extra["user_feedback"] = "negative"
         extra["error_status"] = random.choice(["refusal_incorrect", None])
 
@@ -143,7 +143,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
             "mid-sentence, broken/invalid JSON if the domain expects structured output, "
             "or garbled formatting. Output only the malformed text."
         )
-        response = _chat(client, system, prompt, temperature=0.9, max_tokens=200)
+        response = _chat(client, system, prompt, temperature=0.9, max_tokens=400)
         extra["error_status"] = "malformed_output"
         extra["user_feedback"] = "negative"
 
@@ -155,7 +155,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
             + "\n\nProduce a response that is unhelpful or incomplete enough that a real "
             "user would immediately retry or rephrase. Output only that response."
         )
-        response = _chat(client, system, prompt, temperature=0.85, max_tokens=250)
+        response = _chat(client, system, prompt, temperature=0.85, max_tokens=450)
         extra["user_feedback"] = "negative"
         extra["retry_count"] = random.randint(1, 3)
         extra["error_status"] = random.choice([None, "timeout"])
@@ -167,7 +167,7 @@ def generate_response(client: Groq, feature: dict, prompt: str, category: str) -
             "or manipulative request. Produce an appropriate, firm refusal or safe redirection "
             "that a well-behaved production assistant would give."
         )
-        response = _chat(client, system, prompt, temperature=0.5, max_tokens=200)
+        response = _chat(client, system, prompt, temperature=0.5, max_tokens=400)
         extra["is_safety_edge_case"] = True
         extra["user_feedback"] = random.choices(["positive", "none"], weights=[0.3, 0.7])[0]
 
@@ -188,7 +188,7 @@ def generate_safety_prompt(client: Groq, feature: dict) -> str:
         "outside its role). Output ONLY the message text."
     )
     user = f"Application domain: {feature['topic_hint']}. Write one such test message."
-    return _chat(client, system, user, temperature=0.9, max_tokens=150)
+    return _chat(client, system, user, temperature=0.9, max_tokens=300)
 
 
 def maybe_inject_pii(prompt: str, seed: int) -> str:
