@@ -46,23 +46,18 @@ SIMULATED_MODELS = [
     "openai/gpt-oss-20b",
 ]
 
-# NOTE: llama-3.3-70b-versatile was deprecated for free/developer-tier Groq
-# usage (mid-2026).
-#
-# We initially switched to openai/gpt-oss-120b, but that's a *reasoning*
-# model — it spends hidden "reasoning" tokens on every call (counted against
-# your daily quota even though you never see them), and its free-tier daily
-# token limit (200K TPD) is easy to exhaust well before 1000 logs are
-# generated (observed: ~213 logs consumed the full 200K budget).
-#
-# Switched to llama-3.1-8b-instant instead: not a reasoning model (no hidden
-# token overhead), much cheaper per call, and draws from a separate quota
-# bucket entirely, so it isn't affected by gpt-oss-120b's daily cap.
-# If this model 404s on your account (deprecation status has been
-# inconsistent across Groq's docs), try "openai/gpt-oss-20b" instead — same
-# family as 120b but smaller, so it burns quota more slowly even though it's
-# still a reasoning model.
-GROQ_GENERATION_MODEL = "llama-3.1-8b-instant"
+# NOTE: model journey for this account, in order tried:
+#   1. llama-3.3-70b-versatile  -> 404, deprecated for free/dev tier
+#   2. openai/gpt-oss-120b      -> worked, but hit the 200K daily token quota
+#                                  after ~213 logs (reasoning tokens count
+#                                  against quota even though hidden)
+#   3. llama-3.1-8b-instant     -> 404, not available on this account either
+#   4. openai/gpt-oss-20b       -> current choice: smaller sibling of #2, so
+#                                  it burns through its (separate) daily quota
+#                                  more slowly than 120b did. Still a
+#                                  reasoning model, so it's in REASONING_MODELS
+#                                  below and gets reasoning_effort="low".
+GROQ_GENERATION_MODEL = "openai/gpt-oss-20b"
 
 # Reasoning-capable models need reasoning_effort passed to avoid burning their
 # whole token budget on hidden reasoning with nothing left for the answer.
