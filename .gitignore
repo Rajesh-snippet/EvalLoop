@@ -5,3 +5,4 @@ __pycache__/
 *.pyc
 data/*.duckdb
 data/*.jsonl
+data/*.json
