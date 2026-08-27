@@ -54,7 +54,7 @@ def main():
         print("      ⚠ Very few logs — clustering/sampling results may be degenerate.", file=sys.stderr)
 
     print(f"[2/6] Embedding {len(logs)} prompts (all-MiniLM-L6-v2, local, first run downloads ~80MB) ...")
-    embeddings = embed_texts([l.prompt for l in logs], show_progress=True)
+    embeddings = embed_texts([l.prompt for l in logs])
     print(f"      embeddings shape: {embeddings.shape}")
 
     print(f"[3/6] Clustering (min_cluster_size={args.min_cluster_size}) ...")
