@@ -77,6 +77,23 @@ def load_jsonl_into_db(jsonl_path: str, db_path: str = DEFAULT_DB_PATH) -> int:
     return insert_logs(logs, db_path)
 
 
+def load_all_logs(db_path: str = DEFAULT_DB_PATH) -> list[LogEntry]:
+    """Read every row back out of the logs table as LogEntry objects, in a
+    stable order (by log_id) so downstream indexing (embeddings, cluster
+    labels, etc. all built as parallel arrays aligned by position) is
+    reproducible across repeated runs against the same DB."""
+    con = duckdb.connect(db_path, read_only=True)
+    rows = con.execute("SELECT * FROM logs ORDER BY log_id").fetchall()
+    columns = [d[0] for d in con.description]
+    con.close()
+
+    logs = []
+    for row in rows:
+        d = dict(zip(columns, row))
+        logs.append(LogEntry(**d))
+    return logs
+
+
 def summary_stats(db_path: str = DEFAULT_DB_PATH) -> dict:
     con = duckdb.connect(db_path, read_only=True)
     total = con.execute("SELECT COUNT(*) FROM logs").fetchone()[0]
