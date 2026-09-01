@@ -7,3 +7,4 @@ sentence-transformers>=3.0
 hdbscan>=0.8
 scikit-learn>=1.5
 numpy>=1.26
+streamlit
