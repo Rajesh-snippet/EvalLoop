@@ -198,6 +198,10 @@ def run_eval(
         else:
             failed_count += 1
 
+        status = "PASS" if passed else "FAIL"
+        done = passed_count + failed_count
+        print(f"[{done}/{len(approved_cases)}] {case.case_id} -> {status}")
+
         con.execute(
             """
             INSERT INTO eval_runs
