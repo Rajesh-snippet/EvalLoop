@@ -129,7 +129,7 @@ def _build_judge_user_prompt(case, model_response: str) -> str:
     )
 
 
-@retry_with_backoff(max_attempts=4)
+@retry_with_backoff(max_retries=4)
 def _judge_response(case, model_response: str) -> tuple[bool, str]:
     """Call the judge model to grade the target model's response."""
     client = _get_client()
