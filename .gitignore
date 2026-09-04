@@ -6,3 +6,4 @@ __pycache__/
 data/*.duckdb
 data/*.jsonl
 data/*.json
+data/exports/*.jsonl
