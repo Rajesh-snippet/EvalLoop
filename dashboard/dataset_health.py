@@ -111,8 +111,19 @@ else:
 
 # --- Freshness: days since last case added per cluster ------------------
 st.subheader("Freshness by cluster")
+
+
+def _to_naive_utc(dt):
+    """Normalize a datetime to naive-UTC so aware/naive values can be subtracted safely."""
+    if dt is None:
+        return None
+    if dt.tzinfo is not None:
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt
+
+
 if approved:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     freshness_rows = []
     by_cluster: dict[str, list] = {}
     for c in approved:
@@ -120,7 +131,11 @@ if approved:
 
     for cluster_id, cluster_cases in by_cluster.items():
         latest = max(
-            (c.approved_at for c in cluster_cases if getattr(c, "approved_at", None)),
+            (
+                normalized
+                for c in cluster_cases
+                if (normalized := _to_naive_utc(getattr(c, "approved_at", None))) is not None
+            ),
             default=None,
         )
         days_since = (now - latest).days if latest else None
