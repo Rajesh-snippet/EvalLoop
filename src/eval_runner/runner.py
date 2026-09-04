@@ -86,7 +86,7 @@ def _init_runs_db(runs_db_path: str) -> None:
     con.close()
 
 
-@retry_with_backoff(max_attempts=4)
+@retry_with_backoff(max_retries=4)
 def _generate_target_response(case) -> str:
     """Call the target model with the case's original prompt."""
     client = _get_client()
