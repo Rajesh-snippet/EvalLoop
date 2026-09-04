@@ -23,6 +23,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -98,7 +99,7 @@ def _generate_target_response(case) -> str:
     response = client.chat.completions.create(
         model=EVAL_RUNNER_TARGET_MODEL,
         messages=messages,
-        max_tokens=1024,
+        max_tokens=600,
     )
     return response.choices[0].message.content or ""
 
@@ -201,6 +202,8 @@ def run_eval(
         status = "PASS" if passed else "FAIL"
         done = passed_count + failed_count
         print(f"[{done}/{len(approved_cases)}] {case.case_id} -> {status}")
+
+        time.sleep(3)
 
         con.execute(
             """
