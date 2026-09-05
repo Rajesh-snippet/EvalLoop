@@ -100,6 +100,7 @@ def _generate_target_response(case) -> str:
         model=EVAL_RUNNER_TARGET_MODEL,
         messages=messages,
         max_tokens=600,
+         reasoning_effort="low",
     )
     return response.choices[0].message.content or ""
 
@@ -147,11 +148,10 @@ def _judge_response(case, model_response: str) -> tuple[bool, str]:
     content = response.choices[0].message.content or ""
     if not content.strip():
         raise ValueError(
-            "Judge model returned empty content — likely burned its budget on "
-            "hidden reasoning. Increase max_tokens or check reasoning_effort."
+            "Target model returned empty content — likely burned its budget on "
+            "hidden reasoning despite reasoning_effort='low'. Consider raising max_tokens."
         )
-    parsed = json.loads(content)
-    return bool(parsed["passed"]), str(parsed.get("reasoning", ""))
+    return content
 
 
 def run_eval(
