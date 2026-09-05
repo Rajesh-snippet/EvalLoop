@@ -100,7 +100,7 @@ def _generate_target_response(case) -> str:
         model=EVAL_RUNNER_TARGET_MODEL,
         messages=messages,
         max_tokens=600,
-         reasoning_effort="low",
+         reasoning_effort="none",
     )
     return response.choices[0].message.content or ""
 
