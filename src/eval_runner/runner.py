@@ -148,11 +148,13 @@ def _judge_response(case, model_response: str) -> tuple[bool, str]:
     content = response.choices[0].message.content or ""
     if not content.strip():
         raise ValueError(
-            "Target model returned empty content — likely burned its budget on "
-            "hidden reasoning despite reasoning_effort='low'. Consider raising max_tokens."
+            "Judge model returned empty content — likely burned its budget on "
+            "hidden reasoning. Increase max_tokens or check reasoning_effort."
         )
-    return content
-
+    parsed = json.loads(content)
+    if not isinstance(parsed, dict) or "passed" not in parsed:
+        raise ValueError(f"Judge returned unexpected JSON shape: {parsed!r}")
+    return bool(parsed["passed"]), str(parsed.get("reasoning", ""))
 
 def run_eval(
     eval_db_path: str = DEFAULT_EVAL_DB_PATH,
