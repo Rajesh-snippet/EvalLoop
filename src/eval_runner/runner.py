@@ -173,7 +173,7 @@ def run_eval(
     if limit is not None:
         approved_cases = approved_cases[:limit]
 
-    run_id = str(uuid.uuid4())
+        run_id = run_id or str(uuid.uuid4())
     timestamp = datetime.now(timezone.utc)
 
     if not approved_cases:
