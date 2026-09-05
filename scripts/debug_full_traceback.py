@@ -1,4 +1,8 @@
+import sys
 import traceback
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.eval_builder.eval_case_db import DEFAULT_EVAL_DB_PATH, load_eval_cases_by_status
 from src.eval_runner.runner import _generate_target_response, _judge_response
