@@ -198,21 +198,11 @@ def start_eval_run(request: EvalRunRequest):
 
 @app.get("/eval-runs/{run_id}/status")
 def eval_run_status(run_id: str):
-    """
-    Poll job status. While running, also reports live progress by counting
-    rows already written to eval_runs.duckdb for this run_id.
-    """
+    """Poll job status for a background eval run."""
     job = _JOBS.get(run_id)
     if job is None:
         raise HTTPException(404, f"No job found for run_id '{run_id}' (server may have restarted).")
-
-    response = dict(job)
-    if job["status"] in ("running", "queued"):
-        current_rate = pass_rate(run_id, DEFAULT_RUNS_DB_PATH)
-        response["cases_completed_so_far"] = (
-            None if current_rate is None else "in progress — see /eval-runs for row counts"
-        )
-    return response
+    return job
 
 
 @app.get("/eval-runs")
