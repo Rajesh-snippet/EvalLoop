@@ -100,10 +100,16 @@ html, body, [data-testid="stAppViewContainer"], [class*="css"] {
   background: var(--surface);
   border-right: 1px solid var(--border);
 }
+[data-testid="stDecoration"] { background: var(--primary) !important; height: 3px; }
 [data-testid="stSidebar"] * { color: var(--text); }
 [data-testid="stSidebarNav"] a {
   border-radius: var(--radius-sm);
   transition: background var(--ease), color var(--ease);
+}
+[data-testid="stSidebarNav"] a span,
+[data-testid="stSidebarNav"] a p {
+  color: var(--text) !important;
+  opacity: 1 !important;
 }
 [data-testid="stSidebarNav"] a:hover { background: var(--primary-soft); }
 [data-testid="stSidebarNav"] a[aria-current="page"] {
@@ -187,7 +193,7 @@ html, body, [data-testid="stAppViewContainer"], [class*="css"] {
 
 /* ---- Alerts (st.success/warning/error/info) -------------------------- */
 [data-testid="stAlert"] { border-radius: var(--radius-md); border-width: 1px; }
-
+[data-testid="stAlert"] * { color: var(--text) !important; opacity: 1 !important; }
 /* ---- Dataframes / tables ---------------------------------------------- */
 [data-testid="stDataFrame"] { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
 
