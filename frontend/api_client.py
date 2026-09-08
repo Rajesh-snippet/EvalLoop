@@ -2,6 +2,8 @@ import time
 from typing import Any
 import requests
 import streamlit as st
+from ui import status_badge
+
 API_BASE = "http://localhost:8000"
 REQUEST_TIMEOUT = 30
 
@@ -31,7 +33,7 @@ def run_pipeline_job_with_live_log(start_path: str, status_path_template: str, p
     while True:
         job = api_get(status_path_template.format(job_id=job_id))
         status = job.get("status", "unknown")
-        status_box.info(f"Job status: {status}")
+        status_box.markdown(f"**Job status:** {status_badge(status)}", unsafe_allow_html=True)
         lines = job.get("log") or []
         if lines:
             log_box.code("\n".join(lines[-50:]), language="text")
