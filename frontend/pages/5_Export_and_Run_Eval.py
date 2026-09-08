@@ -1,87 +1,47 @@
-import sys
 import time
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import streamlit as st
 from api_client import api_get, api_post
-
-st.title("5. Export & Run Eval")
-st.caption("Phase 5 — export approved cases to JSONL, run them against the target model, and view results.")
-
-# --- Export -----------------------------------------------------------
-st.subheader("Export approved cases")
-if st.button("Export to JSONL"):
+from ui import configure_page, metric_card, page_header, section, sidebar
+configure_page("Export and Run Evaluation"); sidebar(); page_header("Export & Run Evaluation", "Phase 5: export approved cases, execute evaluations, and compare model runs.")
+section("1. Export approved dataset")
+st.markdown("Create a versioned JSONL dataset containing evaluation cases that have reached the approved state.")
+if st.button("Export approved cases", type="primary"):
     try:
-        result = api_post("/export")
-        st.success(f"Exported v{result['version']} -> {result['path']} ({result['total_cases']} cases)")
-    except Exception as exc:
-        st.error(f"Export failed: {exc}")
-
-st.markdown("---")
-
-# --- Run eval -----------------------------------------------------------
-st.subheader("Run eval against target model")
-st.warning("This calls Groq for every approved case (target model + judge model) — can take several minutes.")
-
-limit = st.number_input("Limit (optional, 0 = all approved cases)", min_value=0, value=0)
-
-if st.button("Start eval run", type="primary"):
-    try:
-        start_result = api_post("/eval-runs", {"limit": int(limit) if limit else None})
-    except Exception as exc:
-        st.error(f"Could not start run: {exc}")
-        st.stop()
-
-    run_id = start_result["run_id"]
-    st.write(f"Run started: `{run_id}`")
-    status_placeholder = st.empty()
-
+        r = api_post("/export")
+        st.success(f"Exported dataset v{r['version']} with {r['total_cases']} approved cases.")
+        st.code(r['path'], language="text")
+    except Exception as exc: st.error(f"Export failed: {exc}")
+section("2. Run evaluation")
+st.warning("An evaluation run can make LLM calls for approved cases and may take several minutes.")
+limit = st.number_input("Evaluation case limit", min_value=0, value=0, step=1, help="0 means all approved cases.")
+if st.button("Start evaluation run", type="primary"):
+    try: start = api_post("/eval-runs", {"limit": int(limit) if limit else None})
+    except Exception as exc: st.error(f"Could not start evaluation run: {exc}"); st.stop()
+    run_id = start["run_id"]; box = st.empty()
     while True:
-        job = api_get(f"/eval-runs/{run_id}/status")
-        status_placeholder.write(f"**Status:** {job['status']}")
-        if job["status"] in ("completed", "failed"):
-            break
+        job = api_get(f"/eval-runs/{run_id}/status"); box.info(f"Run status: {job.get('status','unknown')}")
+        if job.get("status") in {"completed", "failed"}: break
         time.sleep(3)
-
     if job["status"] == "completed":
-        result = job["result"]
-        st.success(f"Run complete: {result['passed']}/{result['total']} passed")
-        if result.get("errors"):
-            st.warning(f"{result['errors']} case(s) hit a runner error — see eval_runs.duckdb judge_reasoning.")
-    else:
-        st.error(f"Run failed: {job.get('error')}")
-
-st.markdown("---")
-
-# --- Run history + regression -------------------------------------------
-st.subheader("Run history")
-try:
-    runs = api_get("/eval-runs")
-except Exception as exc:
-    runs = []
-    st.caption(f"Could not load run history: {exc}")
-
+        r = job.get("result", {}); cols = st.columns(3)
+        for col,label,key,help_text in zip(cols,["Passed","Total","Runner errors"],["passed","total","errors"],["Cases passing evaluation","Cases evaluated","Cases with execution errors"]):
+            with col: metric_card(label, r.get(key,0), help_text)
+        st.success("Evaluation run completed successfully.")
+    else: st.error(f"Evaluation run failed: {job.get('error','Unknown error')}")
+section("3. Run history")
+try: runs = api_get("/eval-runs")
+except Exception as exc: runs=[]; st.error(f"Could not load evaluation history: {exc}")
 if runs:
-    st.dataframe(runs, use_container_width=True)
-
+    st.dataframe(runs, use_container_width=True, hide_index=True)
     if len(runs) >= 2:
-        st.subheader("Regression diff (two most recent runs)")
-        current_run_id = runs[0]["run_id"]
-        previous_run_id = runs[1]["run_id"]
-        diff = api_get(
-            "/eval-runs/regression",
-            params={"previous_run_id": previous_run_id, "current_run_id": current_run_id},
-        )
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown(f"**Regressions ({len(diff['regressions'])})**")
-            st.write(diff["regressions"] or "None")
-        with col2:
-            st.markdown(f"**Improvements ({len(diff['improvements'])})**")
-            st.write(diff["improvements"] or "None")
-    else:
-        st.caption("Run eval at least twice to see a regression diff here.")
-else:
-    st.caption("No runs yet.")
+        section("Regression comparison")
+        cur,prev = runs[0]["run_id"],runs[1]["run_id"]
+        diff = api_get("/eval-runs/regression", params={"previous_run_id":prev,"current_run_id":cur})
+        c1,c2 = st.columns(2)
+        with c1: metric_card("Regressions", len(diff.get("regressions",[])), "Cases that passed before and fail now")
+        with c2: metric_card("Improvements", len(diff.get("improvements",[])), "Cases that failed before and pass now")
+        with st.expander("Regression details"): st.write(diff.get("regressions") or "No regressions detected.")
+        with st.expander("Improvement details"): st.write(diff.get("improvements") or "No improvements detected.")
+    else: st.info("Run the evaluation at least twice to compare two runs.")
+else: st.info("No evaluation runs are available yet.")
+with st.expander("Phase 5 scope"): st.markdown("Phase 5 turns approved evaluation cases into a versioned JSONL asset, executes model evaluations, stores run history, and compares runs for regressions.")
