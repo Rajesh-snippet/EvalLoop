@@ -106,6 +106,12 @@ html, body, [data-testid="stAppViewContainer"], [class*="css"] {
   border-radius: var(--radius-sm);
   transition: background var(--ease), color var(--ease);
 }
+[data-testid="stHeader"] {
+  background: var(--bg) !important;
+}
+[data-testid="stToolbar"] {
+  background: transparent !important;
+}
 [data-testid="stSidebarNav"] a span,
 [data-testid="stSidebarNav"] a p {
   color: var(--text) !important;
