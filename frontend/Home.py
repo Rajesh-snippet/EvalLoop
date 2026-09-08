@@ -1,50 +1,15 @@
-"""
-EvalLoop Pipeline Control — Home.
-
-A thin UI over the FastAPI backend for Phases 1, 2, 3, and 5. The
-existing review app (src/review/streamlit_app.py) and dashboard
-(dashboard/dataset_health.py) remain separate and unchanged — this app
-covers the pipeline-generation steps that previously required the
-command line.
-
-Requires the API to be running:
-    uvicorn src.api.main:app --reload
-
-Run this app:
-    streamlit run frontend/Home.py
-"""
-
 import streamlit as st
-
-st.set_page_config(page_title="EvalLoop Pipeline Control", layout="wide")
-
-st.title("EvalLoop — Pipeline Control")
-st.caption("Drive the pipeline end-to-end through the API instead of the command line.")
-
-st.markdown(
-    """
-Use the pages in the sidebar to run each stage of the pipeline:
-
-1. **Generate Logs** — create a fresh batch of synthetic production logs (Phase 1)
-2. **Cluster Logs** — sample and cluster the current log set (Phase 2)
-3. **Generate Eval Cases** — auto-label candidates into draft/approved eval cases (Phase 3)
-5. **Export & Run Eval** — export approved cases to JSONL and run them against the target model (Phase 5)
-
-For human review of draft cases, use the existing review app:
-```
-streamlit run src/review/streamlit_app.py
-```
-
-For dataset health and pass-rate trends, use the existing dashboard:
-```
-streamlit run dashboard/dataset_health.py
-```
-
-**Before using this app**, make sure the API is running in another terminal:
-```
-uvicorn src.api.main:app --reload
-```
-"""
-)
-
-st.info("This app calls http://localhost:8000 — make sure the API is up before running a stage.")
+from ui import configure_page, page_header, section, sidebar
+configure_page("Pipeline Control")
+sidebar()
+page_header("Pipeline Control", "Run the EvalLoop data-to-evaluation workflow from a single workspace.")
+st.markdown('<div class="el-callout">EvalLoop converts production-like LLM interactions into reusable evaluation cases, routes uncertain cases through human review, and evaluates model performance against the approved dataset.</div>', unsafe_allow_html=True)
+section("Workflow")
+cols = st.columns(5)
+stages = [("01", "Generate Logs", "Create synthetic production-like interactions."), ("02", "Cluster Logs", "Discover interaction groups and rank candidates."), ("03", "Generate Eval Cases", "Turn candidates into structured evaluation cases."), ("04", "Human Review", "Validate and approve generated evaluation cases."), ("05", "Export & Run Eval", "Export approved cases and measure model performance.")]
+for col, (num, title, desc) in zip(cols, stages):
+    with col:
+        st.markdown(f'<div class="el-card"><div class="el-card-label">{num}</div><div style="font-weight:650;margin-top:.35rem">{title}</div><div class="el-card-help">{desc}</div></div>', unsafe_allow_html=True)
+section("Getting started")
+st.markdown("1. Start the FastAPI service: `uvicorn src.api.main:app --reload`\n2. Start this frontend: `streamlit run frontend/Home.py`\n3. Use the sidebar to execute each pipeline stage.\n4. Use the existing Phase 4 review workspace to review draft cases.")
+st.caption("Local/demo application. Authentication and multi-user controls are not included.")
