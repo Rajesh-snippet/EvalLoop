@@ -51,8 +51,9 @@ _STAGES = [
     ("1", "Generate Logs", "1_Generate_Logs"),
     ("2", "Cluster Logs", "2_Cluster_Logs"),
     ("3", "Generate Eval Cases", "3_Generate_Eval_Cases"),
-    ("4", "Human Review", None),
+    ("4", "Human Review", "4_Human_Review"),
     ("5", "Export & Run Eval", "5_Export_and_Run_Eval"),
+    ("6", "Dataset Health", "6_Dataset_Health"),
 ]
 
 _CSS = """
