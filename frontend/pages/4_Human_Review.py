@@ -16,7 +16,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import streamlit as st  # noqa: E402
-from frontend.ui import page_header
+
+from ui import configure_page, page_header, sidebar  # noqa: E402
 
 from src.eval_builder.eval_case_db import DEFAULT_EVAL_DB_PATH  # noqa: E402
 from src.logs.schema import LogEntry  # noqa: E402
@@ -28,12 +29,8 @@ from src.review.queue import (  # noqa: E402
 from src.utils.db import DEFAULT_DB_PATH, load_all_logs  # noqa: E402
 
 
-st.set_page_config(
-    page_title="EvalLoop Review Workspace",
-    page_icon=None,
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+configure_page("Human Review")
+sidebar(active="Human Review")
 
 REVIEWER_ID = "rajesh"
 
