@@ -16,6 +16,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import streamlit as st  # noqa: E402
+from frontend.ui import page_header
 
 from src.eval_builder.eval_case_db import DEFAULT_EVAL_DB_PATH  # noqa: E402
 from src.logs.schema import LogEntry  # noqa: E402
