@@ -2,7 +2,7 @@ import streamlit as st
 from ui import configure_page, page_header, section, sidebar
 configure_page("Pipeline Control")
 sidebar()
-page_header("Pipeline Control", "Run the EvalLoop data-to-evaluation workflow from a single workspace.")
+page_header("EvalLoop Pipeline", "Run the EvalLoop data-to-evaluation workflow from a single workspace.")
 st.markdown('<div class="el-callout">EvalLoop converts production-like LLM interactions into reusable evaluation cases, routes uncertain cases through human review, and evaluates model performance against the approved dataset.</div>', unsafe_allow_html=True)
 section("Workflow")
 cols = st.columns(5)
