@@ -28,6 +28,7 @@ from pydantic import BaseModel
 from src.eval_builder.eval_case_db import (
     DEFAULT_EVAL_DB_PATH,
     eval_case_summary_stats,
+    load_all_eval_cases,
     load_eval_cases_by_status,
 )
 from src.eval_runner.metrics import (
@@ -126,32 +127,46 @@ def review_queue(limit: Optional[int] = None):
     return [case.model_dump() for case in queue]
 
 
+def _find_case_by_id(case_id: str):
+    """apply_review_action/find_similar_approved_cases take the full case
+    object, not a case_id, so look it up across all statuses first."""
+    for case in load_all_eval_cases(DEFAULT_EVAL_DB_PATH):
+        if case.case_id == case_id:
+            return case
+    return None
+
+
 @app.get("/review/similar/{case_id}")
-def review_similar(case_id: str, top_k: int = 3):
-    """Approved cases most similar to the given draft case, for reviewer context."""
-    try:
-        return find_similar_approved_cases(case_id, DEFAULT_EVAL_DB_PATH, top_k=top_k)
-    except KeyError:
+def review_similar(case_id: str, k: int = 3):
+    """Approved cases most similar to the given draft case's prompt, for reviewer context."""
+    case = _find_case_by_id(case_id)
+    if case is None:
         raise HTTPException(404, f"case_id '{case_id}' not found.")
+    similar = find_similar_approved_cases(case.input.prompt, DEFAULT_EVAL_DB_PATH, k=k)
+    return [
+        {"case": similar_case.model_dump(), "similarity": score}
+        for similar_case, score in similar
+    ]
 
 
 @app.post("/review/action")
 def review_action(request: ReviewActionRequest):
     """Apply approve / edit_approve / reject to a draft case."""
+    case = _find_case_by_id(request.case_id)
+    if case is None:
+        raise HTTPException(404, f"case_id '{request.case_id}' not found.")
     try:
         result = apply_review_action(
-            case_id=request.case_id,
-            action=request.action,
+            case,
+            request.action,
             reviewer_id=request.reviewer_id,
-            edits=request.edits,
-            reason=request.reason,
+            edited_fields=request.edits,
+            reject_reason=request.reason,
             eval_db_path=DEFAULT_EVAL_DB_PATH,
         )
         return result.model_dump() if hasattr(result, "model_dump") else result
     except ValueError as exc:
         raise HTTPException(400, str(exc))
-    except KeyError:
-        raise HTTPException(404, f"case_id '{request.case_id}' not found.")
 
 
 # --- Export (Phase 5) -------------------------------------------------------
@@ -198,21 +213,11 @@ def start_eval_run(request: EvalRunRequest):
 
 @app.get("/eval-runs/{run_id}/status")
 def eval_run_status(run_id: str):
-    """
-    Poll job status. While running, also reports live progress by counting
-    rows already written to eval_runs.duckdb for this run_id.
-    """
+    """Poll job status for a background eval run."""
     job = _JOBS.get(run_id)
     if job is None:
         raise HTTPException(404, f"No job found for run_id '{run_id}' (server may have restarted).")
-
-    response = dict(job)
-    if job["status"] in ("running", "queued"):
-        current_rate = pass_rate(run_id, DEFAULT_RUNS_DB_PATH)
-        response["cases_completed_so_far"] = (
-            None if current_rate is None else "in progress — see /eval-runs for row counts"
-        )
-    return response
+    return job
 
 
 @app.get("/eval-runs")
