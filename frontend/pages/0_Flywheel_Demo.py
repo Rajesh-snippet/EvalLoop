@@ -25,6 +25,7 @@ from src.eval_builder.eval_case_db import DEFAULT_EVAL_DB_PATH, load_all_eval_ca
 from src.eval_runner.metrics import DEFAULT_RUNS_DB_PATH  # noqa: E402
 from src.review.review_edit_db import load_edits_for_case  # noqa: E402
 from src.utils.db import DEFAULT_DB_PATH, load_all_logs  # noqa: E402
+from api_client import api_post  # noqa: E402
 from ui import badge, callout, configure_page, page_header, section, sidebar, status_badge  # noqa: E402
 
 configure_page("Flywheel Demo")
@@ -210,3 +211,37 @@ for case in matching_cases:
             unsafe_allow_html=True,
         )
         st.caption(reasoning)
+
+        if not passed and case.status == "approved":
+            with st.expander("Triage this failure"):
+                st.caption(
+                    "A fail usually means the target model answered badly — that's the "
+                    "eval working correctly, not a bug. Only flag this case if the FAILURE "
+                    "is actually caused by a flaw in the case itself (ambiguous criteria, "
+                    "a factual error, missing context), not by the model's answer quality."
+                )
+                triage_reason = st.text_area(
+                    "Why is the case itself flawed?",
+                    key=f"triage_reason_{case.case_id}",
+                    placeholder="e.g. the rubric requires a fact that was never in the original system prompt",
+                )
+                if st.button("Flag as flawed — create revision", key=f"flag_flawed_{case.case_id}"):
+                    if not triage_reason.strip():
+                        st.error("A reason is required — this becomes the audit trail for the revision.")
+                    else:
+                        try:
+                            response = api_post(
+                                "/review/flag-flawed",
+                                {
+                                    "case_id": case.case_id,
+                                    "reason": triage_reason.strip(),
+                                    "reviewer_id": "rajesh",
+                                },
+                            )
+                            st.success(
+                                f"Case deprecated. New draft `{response['case_id']}` created — "
+                                "go to Human Review to complete the revision."
+                            )
+                            st.cache_data.clear()
+                        except Exception as exc:
+                            st.error(f"Could not flag case: {exc}")
