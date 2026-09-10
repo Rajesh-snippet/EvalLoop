@@ -17,7 +17,7 @@ from pathlib import Path
 
 import duckdb
 
-from src.eval_builder.eval_case_schema import EvalCase, EvalCaseInput
+from src.eval_builder.eval_case_schema import EvalCase, EvalCaseInput, transition_status
 
 DEFAULT_EVAL_DB_PATH = "data/eval_cases.duckdb"
 
@@ -40,7 +40,8 @@ CREATE TABLE IF NOT EXISTS eval_cases (
     reviewer_id VARCHAR,
     review_notes VARCHAR,
     created_at TIMESTAMP,
-    approved_at TIMESTAMP
+    approved_at TIMESTAMP,
+    revises_case_id VARCHAR
 );
 
 CREATE TABLE IF NOT EXISTS dedup_rejections (
@@ -58,6 +59,10 @@ def init_eval_db(db_path: str = DEFAULT_EVAL_DB_PATH) -> duckdb.DuckDBPyConnecti
     Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(db_path)
     con.execute(SCHEMA_SQL)
+    # Migration for databases created before revises_case_id existed:
+    # CREATE TABLE IF NOT EXISTS is a no-op on an already-existing table,
+    # so the new column needs an explicit ALTER TABLE on top of it.
+    con.execute("ALTER TABLE eval_cases ADD COLUMN IF NOT EXISTS revises_case_id VARCHAR")
     return con
 
 
@@ -71,6 +76,7 @@ def _case_to_row(c: EvalCase) -> tuple:
         c.difficulty, json.dumps(c.tags),
         c.confidence_score, c.label_source, c.status,
         c.reviewer_id, c.review_notes, c.created_at, c.approved_at,
+        c.revises_case_id,
     )
 
 
@@ -78,7 +84,7 @@ def save_eval_case(case: EvalCase, db_path: str = DEFAULT_EVAL_DB_PATH) -> None:
     con = init_eval_db(db_path)
     con.execute(
         """INSERT OR REPLACE INTO eval_cases VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         _case_to_row(case),
     )
     con.close()
@@ -90,7 +96,7 @@ def save_eval_cases(cases: list[EvalCase], db_path: str = DEFAULT_EVAL_DB_PATH) 
     con = init_eval_db(db_path)
     con.executemany(
         """INSERT OR REPLACE INTO eval_cases VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         [_case_to_row(c) for c in cases],
     )
     con.close()
@@ -117,6 +123,7 @@ def _row_to_case(row: tuple, columns: list[str]) -> EvalCase:
         review_notes=d["review_notes"],
         created_at=d["created_at"],
         approved_at=d["approved_at"],
+        revises_case_id=d.get("revises_case_id"),
     )
 
 
@@ -157,6 +164,47 @@ def log_dedup_rejection(
         [rejection_id, source_log_id, rejected_at, most_similar_case_id, similarity, reason],
     )
     con.close()
+
+
+def deprecate_and_revise(
+    case: EvalCase,
+    reason: str,
+    reviewer_id: str,
+    db_path: str = DEFAULT_EVAL_DB_PATH,
+) -> EvalCase:
+    """
+    Triage action for a case whose eval failure was traced to a FLAW IN THE
+    CASE, not a genuine model failure (the model failing correctly is not
+    a reason to touch the case — see revises_case_id docstring in
+    eval_case_schema.py). Deprecates the current approved case via the
+    normal state machine (approved_at, past eval_runs rows, and review
+    history stay untouched — deprecated is terminal, never deleted) and
+    creates a NEW draft case carrying the same content, linked back via
+    revises_case_id. The new case re-enters the ordinary Phase 4 review
+    queue rather than auto-approving, so a revision still passes the same
+    6-point bar as any other case.
+    """
+    deprecated = transition_status(case, "deprecated", reviewer_id=reviewer_id, review_notes=reason)
+    save_eval_case(deprecated, db_path)
+
+    revision = EvalCase(
+        source_log_id=case.source_log_id,
+        source_cluster_id=case.source_cluster_id,
+        input=case.input,
+        eval_type=case.eval_type,
+        expected_behavior=case.expected_behavior,
+        rubric=case.rubric,
+        forbidden_assertions=case.forbidden_assertions,
+        difficulty=case.difficulty,
+        tags=case.tags,
+        confidence_score=case.confidence_score,
+        label_source="human_edited",
+        status="draft",
+        review_notes=f"Revision of {case.case_id}: {reason}",
+        revises_case_id=case.case_id,
+    )
+    save_eval_case(revision, db_path)
+    return revision
 
 
 def eval_case_summary_stats(db_path: str = DEFAULT_EVAL_DB_PATH) -> dict:
