@@ -71,6 +71,12 @@ class EvalCase(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     approved_at: Optional[datetime] = None
 
+    # Set only on cases created via the triage flow (Phase 6 addition): a
+    # case flagged as flawed during eval-result review gets deprecated, and
+    # a new draft case is created carrying this link back to it, so lineage
+    # survives instead of silently vanishing. None for ordinary Phase 3 cases.
+    revises_case_id: Optional[str] = None
+
     @model_validator(mode="after")
     def _eval_type_fields_consistency(self) -> "EvalCase":
         if self.eval_type in ("golden_answer", "expected_refusal") and not (
