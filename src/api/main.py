@@ -27,6 +27,7 @@ from pydantic import BaseModel
 
 from src.eval_builder.eval_case_db import (
     DEFAULT_EVAL_DB_PATH,
+    deprecate_and_revise,
     eval_case_summary_stats,
     load_all_eval_cases,
     load_eval_cases_by_status,
@@ -71,6 +72,12 @@ class ReviewActionRequest(BaseModel):
     reviewer_id: str
     edits: Optional[dict] = None
     reason: Optional[str] = None
+
+
+class FlagFlawedRequest(BaseModel):
+    case_id: str
+    reason: str
+    reviewer_id: str
 
 
 class EvalRunRequest(BaseModel):
@@ -165,6 +172,26 @@ def review_action(request: ReviewActionRequest):
             eval_db_path=DEFAULT_EVAL_DB_PATH,
         )
         return result.model_dump() if hasattr(result, "model_dump") else result
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/review/flag-flawed")
+def flag_flawed(request: FlagFlawedRequest):
+    """
+    Triage action for a case whose eval FAILURE was traced to a flaw in the
+    case itself, not a genuine model failure. Deprecates the current
+    approved case and creates a linked draft revision that re-enters the
+    normal review queue — never auto-approved.
+    """
+    case = _find_case_by_id(request.case_id)
+    if case is None:
+        raise HTTPException(404, f"case_id '{request.case_id}' not found.")
+    if case.status != "approved":
+        raise HTTPException(400, f"Only approved cases can be flagged as flawed (current status: '{case.status}').")
+    try:
+        revision = deprecate_and_revise(case, request.reason, request.reviewer_id, DEFAULT_EVAL_DB_PATH)
+        return revision.model_dump()
     except ValueError as exc:
         raise HTTPException(400, str(exc))
 
