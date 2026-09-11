@@ -90,6 +90,8 @@ Most failures mean the target model answered badly — that's the eval working c
 **6. Regression tracking is case-by-case, not just an aggregate score.**
 Two eval runs can have the same pass rate while completely different cases flipped underneath. The regression diff surfaces exactly which cases improved or regressed between any two runs.
 
+**7. Human-in-the-loop:** Rather than trusting every auto-generated label, EvalLoop routes low-confidence cases to a structured human review queue — and closes the loop further by feeding tracked reviewer corrections back into the labeling prompt itself, so the system's judgment measurably improves from the humans correcting it.
+**8. LLM-as-judge:** EvalLoop enforces a strict separation between the model being evaluated and the model doing the grading — a different LLM judges each response against its rubric or golden answer, specifically to avoid the self-grading bias that undermines naive "LLM judges its own output" setups.
 ---
 
 ## Pipeline stages
