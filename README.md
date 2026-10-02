@@ -93,9 +93,10 @@ Two eval runs can have the same pass rate while completely different cases flipp
 **7. Human-in-the-loop:**
 EvalLoop sends low-confidence labels to a structured review queue instead of accepting them automatically. Reviewer corrections are tracked and used to refine future labeling prompts, helping improve the system’s judgments over time.
 
+
 **8. LLM-as-judge:**
 EvalLoop uses a separate LLM to grade each response against a rubric or reference answer. Keeping the evaluator distinct from the model being evaluated helps reduce self-grading bias.
----
+
 
 ## Pipeline stages
 
